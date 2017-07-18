@@ -1,3 +1,11 @@
+--
+-- iolatency
+--
+-- based on biolatency.py
+--
+-- Metric 'sd' contains comulative statistics for all block devices
+--
+
 local ffi = require("ffi")
 local circll = require("circll")
 
