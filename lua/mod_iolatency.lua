@@ -19,13 +19,13 @@ typedef struct disk_key {
     u64 slot;
 } disk_key_t;
 
-BPF_HASH(start, struct request *);
-BPF_HASH(dist, disk_key_t);
+BPF_HASH(iolat_start, struct request *);
+BPF_HASH(iolat_dist, disk_key_t);
 
 // time block I/O
-int trace_req_start(struct pt_regs *ctx, struct request *req) {
+int trace_req_iolat_start(struct pt_regs *ctx, struct request *req) {
     u64 ts = bpf_ktime_get_ns();
-    start.update(&req, &ts);
+    iolat_start.update(&req, &ts);
     return 0;
 }
 
@@ -34,7 +34,7 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
     u64 *old, *tsp, delta, zero = 0;
 
     // fetch timestamp and calculate delta
-    tsp = start.lookup(&req);
+    tsp = iolat_start.lookup(&req);
     if (tsp == 0) {
         return 0;   // missed issue
     }
@@ -44,21 +44,21 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
     // store as histogram
     disk_key_t key = {.slot = circll_slot(delta)};
     bpf_probe_read(&key.disk, sizeof(key.disk), req->rq_disk->disk_name); // read name
-    old = dist.lookup_or_init(&key, &zero);
+    old = iolat_dist.lookup_or_init(&key, &zero);
     (*old)++;
     memcpy(key.disk, "sd", 3);
-    old = dist.lookup_or_init(&key, &zero);
+    old = iolat_dist.lookup_or_init(&key, &zero);
     (*old)++;
-    start.delete(&req);
+    iolat_start.delete(&req);
     return 0;
 }
 ]],
 
   init = function(self, bpf)
-    bpf:attach_kprobe{event="blk_start_request", fn_name="trace_req_start"}
-    bpf:attach_kprobe{event="blk_mq_start_request", fn_name="trace_req_start"}
+    bpf:attach_kprobe{event="blk_start_request", fn_name="trace_req_iolat_start"}
+    bpf:attach_kprobe{event="blk_mq_start_request", fn_name="trace_req_iolat_start"}
     bpf:attach_kprobe{event="blk_account_io_completion", fn_name="trace_req_completion"}
-    self.pipe = bpf:get_table("dist")
+    self.pipe = bpf:get_table("iolat_dist")
   end,
 
   read = function(self)
