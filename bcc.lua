@@ -32,7 +32,9 @@ return function(BPF)
     ffi.C.sleep(interval)
     local metrics = {}
     for mod_name, mod in pairs(mods) do
-      metrics[mod_name] = mod:read()
+      for metric_name, val in mod:read() do
+        metrics[mod_name .. '`' .. metric_name] = val
+      end
     end
     io.stdout:write(json.encode(metrics))
     io.stdout:write("\n")
