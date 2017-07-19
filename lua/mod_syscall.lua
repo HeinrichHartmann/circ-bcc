@@ -14,8 +14,6 @@ local SYSCALLS = {
   "sys_mprotect",
   "sys_munmap",
   "sys_brk",
-}
-local SYSCALLS_2 = {
   "sys_rt_sigaction",
   "sys_rt_sigprocmask",
   "sys_rt_sigreturn",
@@ -374,12 +372,12 @@ return {
 
   init = function(self, bpf)
     for id, name in ipairs(SYSCALLS) do
-      print("attaching " .. name)
+      -- print("attaching " .. name)
       local ok = pcall(function()
           bpf:attach_kprobe { event=name, fn_name="syscall_trace_start" }
           bpf:attach_kprobe { event=name, fn_name="syscall_trace_completion_" .. name, retprobe = 1 }
       end)
-      if not ok then print("... FAILED!") end
+      -- if not ok then print("... FAILED!") end
     end
     self.pipe = bpf:get_table("syscall_dist")
   end,
