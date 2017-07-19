@@ -27,7 +27,7 @@ return function(BPF)
   end
 
   -- output
-  local interval = 3
+  local interval = 60
   while(true) do
     ffi.C.sleep(interval)
     local metrics = {}

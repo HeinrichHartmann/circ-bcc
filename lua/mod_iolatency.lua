@@ -66,11 +66,10 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
     for k, v in self.pipe:items() do
       local disk = ffi.string(k.disk)
       if disk ~= "" then
-        local bin = circll.bin(k.slot)
-        local cnt = tonumber(v)
-        metrics[disk] = metrics[disk] or { _type = "n", _value = {} }
-        metrics[disk]._value[#(metrics[disk]._value)+1] = string.format("H[%.2g]=%d", bin, cnt)
+        metrics[disk] = metrics[disk] or circll.hist()
+        metrics[disk]:add(k.slot, v)
       end
+      circll.clear(self.pipe)
     end
     return metrics
   end,

@@ -85,13 +85,11 @@ return {
   end,
 
   read = function(self)
-    local hist = {}
+    local hist = circll.hist()
     for k,v in self.pipe:items() do
-      local bin = circll.bin(k.slot)
-      local cnt = tonumber(v)
-      -- hist[bin] = cnt
-      print(string.format("H[%.2g]=%d", bin, cnt))
+      hist:add(k.slot, v)
     end
+    circll.clear(self.pipe)
     return hist
   end
 }
