@@ -11,7 +11,7 @@ local mods = {
   runq = require("mod_runqlat"),
 }
 
-local function submit(metrics)
+local function submit_nad(metrics)
   io.stdout:write(json.encode(metrics))
   io.stdout:write("\n\n")
   io.stdout:flush()
@@ -43,7 +43,7 @@ return function(BPF)
         metrics[mod_name .. '`' .. metric_name] = val
       end
     end
-    submit(metrics)
+    submit_nad(metrics)
   end
 
 end
