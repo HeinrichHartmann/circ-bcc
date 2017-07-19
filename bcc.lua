@@ -11,8 +11,15 @@ local mods = {
   runq = require("mod_runqlat"),
 }
 
+local function submit(metrics)
+  io.stdout:write(json.encode(metrics))
+  io.stdout:write("\n\n")
+  io.stdout:flush()
+end
+
 return function(BPF)
-  io.stdout:write("\n") -- submit empty sample set, so we don't block nad
+  io.stdout:write("{}\n") -- submit empty sample set, so we don't block nad
+  io.stdout:write("\n") -- extra blank line to finalize metric set
   io.stdout:flush()
   
   local BPF_TEXT = bpf_preamble
@@ -32,12 +39,11 @@ return function(BPF)
     ffi.C.sleep(interval)
     local metrics = {}
     for mod_name, mod in pairs(mods) do
-      for metric_name, val in mod:read() do
+      for metric_name, val in pairs(mod:read()) do
         metrics[mod_name .. '`' .. metric_name] = val
       end
     end
-    io.stdout:write(json.encode(metrics))
-    io.stdout:write("\n")
-    io.stdout:flush()
+    submit(metrics)
   end
+
 end
