@@ -1,11 +1,16 @@
 --
 -- BPF circllhist helper
 --
+
 local circll = {}
-local bit = require("bit")
-local xff = bit.tobit(0xff)
 
 circll.text = [[
+
+typedef struct {
+  s8 val;
+  s8 exp;
+} circll_bin_t;
+
 #define LLN() if(v > 100) { exp++; v /= 10; } else goto good;
 #define LLN2() LLN() LLN()
 #define LLN4() LLN2() LLN2()
@@ -15,21 +20,19 @@ circll.text = [[
 #define LLN64() LLN32() LLN32()
 #define LLN128() LLN64() LLN64()
 
-static unsigned int circll_slot(unsigned long v) {
-  int exp = 1;
-  if(v == 0) return 0;
-  if(v < 10) return (v*10 << 8) | exp;
+static circll_bin_t circll_bin(u64 v) {
+  s8 exp = 1;
+  if(v == 0) return (circll_bin_t) {.val = 0, .exp = 0};
+  if(v < 10) return (circll_bin_t) {.val = v*10, .exp = 1};
   LLN128()
-  if(v > 100) return 0xff00;
+  if(v > 100) return (circll_bin_t)  {.val = -1, .exp = 0};
  good:
-  return (v << 8) | (exp & 0xff);
+  return (circll_bin_t) {.val = v, .exp = exp};
 }
 ]]
 
-circll.bin = function(slot)
-  local slot_hi = bit.band(xff, bit.rshift(bit.tobit(tonumber(slot)), 8))
-  local slot_lo = bit.band(xff, bit.tobit(tonumber(slot)))
-  return slot_hi * 10.0 ^ (slot_lo - 1)
+circll.bin = function(circll_bin)
+  return circll_bin.val * 10.0 ^ (circll_bin.exp - 1)
 end
 
 -- this should really be in bcc
@@ -46,10 +49,10 @@ end
 
 local mt_hist = {
   __index = {
-    add = function(self, slot, val)
-      local bin = circll.bin(slot)
+    add = function(self, slot, val, exp_offset)
+      local bin = circll.bin(slot, exp_offset)
       local cnt = tonumber(val)
-      self._value[#(self._value) + 1] = string.format("H[%.2g]=%d", bin, cnt)
+      self._value[#(self._value) + 1] = string.format("H[%.1e]=%d", bin, cnt)
       return self
     end,
   }

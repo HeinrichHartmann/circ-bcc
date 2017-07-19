@@ -16,12 +16,8 @@ typedef struct pidns_key {
     u64 slot;
 } pidns_key_t;
 
-typedef struct dist_key {
-    u64 slot;
-} dist_key_t;
-
 BPF_HASH(runqlat_start, u32);
-BPF_HASH(runqlat_dist, dist_key_t);
+BPF_HASH(runqlat_dist, circll_bin_t);
 
 struct rq;
 
@@ -61,10 +57,10 @@ int trace_run(struct pt_regs *ctx, struct task_struct *prev)
     delta = bpf_ktime_get_ns() - *tsp;
 
     // store as histogram
-    u64 *old, zero = 0;
-    dist_key_t key = { .slot = circll_slot(delta) };
-    old = runqlat_dist.lookup_or_init(&key, &zero);
-    (*old)++;
+    u64 *val, zero = 0;
+    circll_bin_t key = circll_bin(delta);
+    val = runqlat_dist.lookup_or_init(&key, &zero);
+    (*val)++;
 
     runqlat_start.delete(&pid);
     return 0;
@@ -87,9 +83,9 @@ return {
   read = function(self)
     local hist = circll.hist()
     for k,v in self.pipe:items() do
-      hist:add(k.slot, v)
+      hist:add(k, v)
     end
     circll.clear(self.pipe)
-    return hist
+    return { latency = hist }
   end
 }

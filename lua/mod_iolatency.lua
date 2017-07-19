@@ -16,7 +16,7 @@ return {
 
 typedef struct disk_key {
     char disk[DISK_NAME_LEN];
-    u64 slot;
+    circll_bin_t bin;
 } disk_key_t;
 
 BPF_HASH(iolat_start, struct request *);
@@ -39,16 +39,19 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
         return 0;   // missed issue
     }
     delta = bpf_ktime_get_ns() - *tsp;
-    delta /= 1000;
 
     // store as histogram
-    disk_key_t key = {.slot = circll_slot(delta)};
+    disk_key_t key = {.bin = circll_bin(delta)};
+    // 1) current disk
     bpf_probe_read(&key.disk, sizeof(key.disk), req->rq_disk->disk_name); // read name
     old = iolat_dist.lookup_or_init(&key, &zero);
     (*old)++;
+    // 2) aggregated disk
     memcpy(key.disk, "sd", 3);
     old = iolat_dist.lookup_or_init(&key, &zero);
     (*old)++;
+
+    // cleanup
     iolat_start.delete(&req);
     return 0;
 }
@@ -67,7 +70,7 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
       local disk = ffi.string(k.disk)
       if disk ~= "" then
         metrics[disk] = metrics[disk] or circll.hist()
-        metrics[disk]:add(k.slot, v)
+        metrics[disk]:add(k.bin, v)
       end
       circll.clear(self.pipe)
     end
