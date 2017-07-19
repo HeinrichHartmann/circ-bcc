@@ -8,5 +8,5 @@
 int main() {
   setuid(geteuid());
   putenv("LUA_PATH=/opt/circonus/circ-bcc/lua/?.lua");
-  system("/opt/circonus/circ-bcc/bcc.lua");
+  system("/opt/circonus/circ-bcc/bpf.lua");
 }

@@ -7,5 +7,5 @@ install: all
 	rsync -av . /opt/circonus/circ-bcc
 	chmod +s /opt/circonus/circ-bcc/nad-plugin.elf
 
-install-nad:
-	ln -s /opt/circonus/circ-bcc/nad-plugin.elf /opt/circonus/nad/etc/node-agent.d/bpf.elf
+install-nad: install
+	ln -s -f /opt/circonus/circ-bcc/nad-plugin.elf /opt/circonus/nad/etc/node-agent.d/bpf.elf

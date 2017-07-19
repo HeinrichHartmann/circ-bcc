@@ -68,8 +68,9 @@ int trace_run(struct pt_regs *ctx, struct task_struct *prev)
 ]]
 
 return {
+
   text = BPF_TEXT,
-  
+
   init = function(self, bpf)
     for event in io.open("/sys/kernel/debug/tracing/available_filter_functions"):lines() do
       if event:match("enqueue_task_.*") then
@@ -80,7 +81,7 @@ return {
     self.pipe = bpf:get_table("runqlat_dist")
   end,
 
-  read = function(self)
+  pull = function(self)
     local hist = circll.hist()
     for k,v in self.pipe:items() do
       hist:add(k, v)

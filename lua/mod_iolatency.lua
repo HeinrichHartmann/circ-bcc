@@ -64,16 +64,14 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
     self.pipe = bpf:get_table("iolat_dist")
   end,
 
-  read = function(self)
+  pull = function(self)
     local metrics = {}
     for k, v in self.pipe:items() do
       local disk = ffi.string(k.disk)
-      if disk ~= "" then
-        metrics[disk] = metrics[disk] or circll.hist()
-        metrics[disk]:add(k.bin, v)
-      end
-      circll.clear(self.pipe)
+      metrics[disk] = metrics[disk] or circll.hist()
+      metrics[disk]:add(k.bin, v)
     end
+    circll.clear(self.pipe)
     return metrics
   end,
 }

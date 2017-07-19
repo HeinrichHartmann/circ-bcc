@@ -5,8 +5,9 @@ local json = require("dkjson")
 local bpf_preamble = require("circll").text
 
 local mods = {
-  io = require("mod_iolatency"),
+  ['io'] = require("mod_iolatency"),
   runq = require("mod_runqlat"),
+  syscall = require("mod_syscall"),
 }
 local INTERVAL = tonumber(arg[1]) or 60
 
@@ -39,7 +40,7 @@ return function(BPF)
     ffi.C.sleep(INTERVAL)
     local metrics = {}
     for mod_name, mod in pairs(mods) do
-      for metric_name, val in pairs(mod:read()) do
+      for metric_name, val in pairs(mod:pull()) do
         metrics[mod_name .. '`' .. metric_name] = val
       end
     end
