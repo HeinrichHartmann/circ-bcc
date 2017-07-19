@@ -2,4 +2,4 @@
 
 export LUA_PATH=$(pwd)/lua/?.lua
 
-./bcc.lua $@
+./bpf.lua $@
