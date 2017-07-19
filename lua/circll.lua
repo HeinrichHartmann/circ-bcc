@@ -20,14 +20,14 @@ typedef struct {
 #define LLN64() LLN32() LLN32()
 #define LLN128() LLN64() LLN64()
 
-static circll_bin_t circll_bin(u64 v) {
+static circll_bin_t circll_bin(u64 v, s8 exp_offset) {
   s8 exp = 1;
-  if(v == 0) return (circll_bin_t) {.val = 0, .exp = 0};
-  if(v < 10) return (circll_bin_t) {.val = v*10, .exp = 1};
+  if(v == 0) return (circll_bin_t)  {.val = 0,    .exp = 0 + exp_offset};
+  if(v < 10) return (circll_bin_t)  {.val = v*10, .exp = 1 + exp_offset};
   LLN128()
-  if(v > 100) return (circll_bin_t)  {.val = -1, .exp = 0};
+  if(v > 100) return (circll_bin_t) {.val = -1,   .exp = 0 + exp_offset};
  good:
-  return (circll_bin_t) {.val = v, .exp = exp};
+  return (circll_bin_t) {.val = v, .exp = exp + exp_offset};
 }
 ]]
 
@@ -57,6 +57,7 @@ local mt_hist = {
     end,
   }
 }
+
 circll.hist = function()
   return setmetatable({ _type = "n", _value = {} }, mt_hist)
 end

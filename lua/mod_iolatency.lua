@@ -41,7 +41,7 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
     delta = bpf_ktime_get_ns() - *tsp;
 
     // store as histogram
-    disk_key_t key = {.bin = circll_bin(delta)};
+    disk_key_t key = {.bin = circll_bin(delta, -9)};
     // 1) current disk
     bpf_probe_read(&key.disk, sizeof(key.disk), req->rq_disk->disk_name); // read name
     old = iolat_dist.lookup_or_init(&key, &zero);

@@ -4,12 +4,13 @@ local ffi = require("ffi")
 local json = require("dkjson")
 local bpf_preamble = require("circll").text
 
-ffi.cdef "unsigned int sleep(unsigned int seconds);"
-  
 local mods = {
   io = require("mod_iolatency"),
   runq = require("mod_runqlat"),
 }
+local INTERVAL = tonumber(arg[1]) or 60
+
+ffi.cdef "unsigned int sleep(unsigned int seconds);"
 
 local function submit_nad(metrics)
   io.stdout:write(json.encode(metrics))
@@ -34,9 +35,8 @@ return function(BPF)
   end
 
   -- output
-  local interval = 60
   while(true) do
-    ffi.C.sleep(interval)
+    ffi.C.sleep(INTERVAL)
     local metrics = {}
     for mod_name, mod in pairs(mods) do
       for metric_name, val in pairs(mod:read()) do
@@ -45,5 +45,4 @@ return function(BPF)
     end
     submit_nad(metrics)
   end
-
 end

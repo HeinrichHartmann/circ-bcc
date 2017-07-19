@@ -58,7 +58,7 @@ int trace_run(struct pt_regs *ctx, struct task_struct *prev)
 
     // store as histogram
     u64 *val, zero = 0;
-    circll_bin_t key = circll_bin(delta);
+    circll_bin_t key = circll_bin(delta, -9);
     val = runqlat_dist.lookup_or_init(&key, &zero);
     (*val)++;
 
