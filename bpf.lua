@@ -5,7 +5,7 @@ local json = require("dkjson")
 local bpf_preamble = require("circll").text
 
 local mods = {
-  ['io'] = require("mod_iolatency"),
+  ['biolatency'] = require("mod_biolatency"),
   runq = require("mod_runqlat"),
   syscall = require("mod_syscall"),
 }
@@ -20,10 +20,9 @@ local function submit_nad(metrics)
 end
 
 return function(BPF)
-  io.stdout:write("{}\n") -- submit empty sample set, so we don't block nad
-  io.stdout:write("\n") -- extra blank line to finalize metric set
-  io.stdout:flush()
-  
+  -- submit an empty record, so that we don't block nad on stratup
+  submit_nad({})
+
   local BPF_TEXT = bpf_preamble
   for mod_name, mod in pairs(mods) do
     BPF_TEXT = BPF_TEXT .. mod.text .. "\n"
