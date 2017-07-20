@@ -317,6 +317,8 @@ local SYSCALLS = {
   "sys_finit_module",
 }
 
+SYSCALLS[0] = "all"
+
 local BPF_HEAD = [[
 #include <uapi/linux/ptrace.h>
 
@@ -326,6 +328,7 @@ typedef struct {
 } syscall_dist_key_t;
 
 BPF_HASH(syscall_start, u64, u64);
+BPF_HASH(syscall_count, u64, u64);
 BPF_HASH(syscall_dist,  syscall_dist_key_t, u64);
 
 int syscall_trace_start(struct pt_regs *ctx) {
@@ -341,11 +344,18 @@ static int syscall_trace_completion_with_id(u64 id) {
   if (!start_ns) return 0;
   u64 delta = bpf_ktime_get_ns() - *start_ns;
 
+  // increment syscall count
+  u64 *val, zero = 0;
+  val = syscall_count.lookup_or_init(&id, &zero);
+  (*val)++;
+  // record syscall latency
   syscall_dist_key_t key = {};
   key.id = id;
   key.bin = circll_bin(delta, -9);
-  u64 zero = 0;
-  u64 *val;
+  val = syscall_dist.lookup_or_init(&key, &zero);
+  (*val)++;
+  // record syscall summary
+  key.id = 0;
   val = syscall_dist.lookup_or_init(&key, &zero);
   (*val)++;
   return 0;
@@ -384,16 +394,21 @@ return {
       io.stderr:write(ok and "OK\n" or "FAILED\n")
     end
     self.pipe = bpf:get_table("syscall_dist")
+    self.pipe_count = bpf:get_table("syscall_count")
   end,
 
   pull = function(self)
     local metrics = {}
     for k,v in self.pipe:items() do
-      local call = SYSCALLS[tonumber(k.id)]
-      metrics[call] = metrics[call] or circll.hist()
-      metrics[call]:add(k.bin, v)
+      local m = "latency`" .. SYSCALLS[tonumber(k.id)]
+      metrics[m] = metrics[m] or circll.hist()
+      metrics[m]:add(k.bin, v)
     end
     circll.clear(self.pipe)
+    for k,v in self.pipe_count:items() do
+      local m = "count`" .. SYSCALLS[tonumber(k)]
+      metrics[m] = metrics[m] and metrics[m] + tonumber(v) or tonumber(v)
+    end
     return metrics
   end
 

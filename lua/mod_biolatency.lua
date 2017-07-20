@@ -67,9 +67,9 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req) {
   pull = function(self)
     local metrics = {}
     for k, v in self.pipe:items() do
-      local disk = ffi.string(k.disk)
-      metrics[disk] = metrics[disk] or circll.hist()
-      metrics[disk]:add(k.bin, v)
+      local m = "latency`" .. ffi.string(k.disk)
+      metrics[m] = metrics[m] or circll.hist()
+      metrics[m]:add(k.bin, v)
     end
     circll.clear(self.pipe)
     return metrics

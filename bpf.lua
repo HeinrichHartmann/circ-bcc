@@ -5,7 +5,7 @@ local json = require("dkjson")
 local bpf_preamble = require("circll").text
 
 local mods = {
-  ['biolatency'] = require("mod_biolatency"),
+  bio = require("mod_biolatency"),
   runq = require("mod_runqlat"),
   syscall = require("mod_syscall"),
 }
