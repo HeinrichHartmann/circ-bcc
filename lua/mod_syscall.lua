@@ -329,30 +329,34 @@ BPF_HASH(syscall_start, u64, u64);
 BPF_HASH(syscall_dist,  syscall_dist_key_t, u64);
 
 int syscall_trace_start(struct pt_regs *ctx) {
-  // bpf_trace_printk("trace_start\n");
   u64 pid_tgid = bpf_get_current_pid_tgid();
   u64 t = bpf_ktime_get_ns();
   syscall_start.update(&pid_tgid, &t);
   return 0;
 }
-]]
 
-local BPF_PROBE_TEMPLATE = [[
-// PROBE $ID : $NAME
-int syscall_trace_completion_$NAME(struct pt_regs *ctx){
+static int syscall_trace_completion_with_id(u64 id) {
   u64 pid_tgid = bpf_get_current_pid_tgid();
   u64 *start_ns = syscall_start.lookup(&pid_tgid);
   if (!start_ns) return 0;
   u64 delta = bpf_ktime_get_ns() - *start_ns;
 
   syscall_dist_key_t key = {};
-  key.id = $ID;
+  key.id = id;
   key.bin = circll_bin(delta, -9);
   u64 zero = 0;
   u64 *val;
   val = syscall_dist.lookup_or_init(&key, &zero);
   (*val)++;
   return 0;
+}
+
+]]
+
+local BPF_PROBE_TEMPLATE = [[
+// PROBE $ID : $NAME
+int syscall_trace_completion_$NAME(struct pt_regs *ctx){
+  return syscall_trace_completion_with_id($ID);
 }
 ]]
 
@@ -372,12 +376,12 @@ return {
 
   init = function(self, bpf)
     for id, name in ipairs(SYSCALLS) do
-      -- print("attaching " .. name)
+      io.stderr:write("attaching " .. name .. " ... ")
       local ok = pcall(function()
           bpf:attach_kprobe { event=name, fn_name="syscall_trace_start" }
           bpf:attach_kprobe { event=name, fn_name="syscall_trace_completion_" .. name, retprobe = 1 }
       end)
-      -- if not ok then print("... FAILED!") end
+      io.stderr:write(ok and "OK\n" or "FAILED\n")
     end
     self.pipe = bpf:get_table("syscall_dist")
   end,
